@@ -126,8 +126,8 @@ export default async function UnitDetailPage({
               alt={`Showcase ${unit.serialNumber}`}
               fill
               className="object-cover"
-              unoptimized
               priority
+              unoptimized // Tambahkan ini kembali
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent z-10"></div>
             <div className="absolute top-6 right-6 z-20">

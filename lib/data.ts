@@ -4,7 +4,7 @@ export const USERS = [
   {
     id: "u1",
     username: "manager_coffee",
-    password: "password123", // Tambahkan password untuk simulasi login
+    password: "password123",
     role: "client",
     clientName: "Global Coffee Chain",
   },
