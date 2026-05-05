@@ -45,3 +45,5 @@ next-env.d.ts
 *.pem
 *.key
 /tmp/
+.vercel
+.env*.local

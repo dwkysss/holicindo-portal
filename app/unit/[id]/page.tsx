@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import Image from "next/image";
+import ServiceForm from "@/components/ServiceForm";
+// Import helper supabase untuk mengambil data riwayat
+import { supabase } from "@/lib/supabase";
 
 export default async function UnitDetailPage({
   params,
@@ -29,13 +32,10 @@ export default async function UnitDetailPage({
   const userId = cookieStore.get("user_id")?.value;
   const currentUser = USERS.find((u) => u.id === userId);
 
-  // Jika tidak ada sesi aktif, arahkan ke Gateway (Launcher)
   if (!currentUser) return redirect("/gateway");
 
-  // 3. Logika Bisnis: Cek Garansi
+  // 3. Logika Bisnis & Otorisasi
   const isExpired = new Date(unit.warrantyExpiry) < new Date();
-
-  // 4. Otorisasi (RBAC): Admin memiliki akses penuh, Klien hanya unit miliknya
   const isOwner = unit.ownerId === currentUser.id;
   const isAdmin = currentUser.role === "admin";
 
@@ -77,7 +77,18 @@ export default async function UnitDetailPage({
     );
   }
 
-  // 5. Tampilan Detail Unit
+  // 4. Ambil Riwayat Laporan (Khusus untuk tampilan Admin)
+  let serviceHistory = [];
+  if (isAdmin) {
+    const { data } = await supabase
+      .from("service_requests")
+      .select("*")
+      .eq("serial_number", unit.serialNumber)
+      .order("created_at", { ascending: false });
+
+    serviceHistory = data || [];
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col items-center p-4 pb-12 font-sans">
       <div className="w-full max-w-md">
@@ -188,52 +199,72 @@ export default async function UnitDetailPage({
               </Link>
             </section>
 
-            {/* Portal Layanan */}
-            <section className="bg-blue-50/50 p-6 rounded-[2.5rem] border border-blue-100">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg shadow-blue-200">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-gray-800 leading-none">
-                    Request Service
+            {/* KONDISIONAL: Tampilan Admin (Riwayat) vs Klien (Formulir) */}
+            {isAdmin ? (
+              <section className="bg-white p-6 rounded-[2.5rem] border-2 border-orange-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-orange-500 p-2 rounded-lg text-white shadow-lg shadow-orange-100">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                  </div>
+                  <h3 className="font-black text-gray-900 uppercase text-[10px] tracking-widest">
+                    Riwayat Kendala
                   </h3>
-                  <p className="text-[10px] text-blue-400 font-bold uppercase tracking-tighter mt-1">
-                    Layanan Teknis Cepat
-                  </p>
                 </div>
-              </div>
-              <form className="space-y-4">
-                <input
-                  type="hidden"
-                  name="serial_number"
-                  value={unit.serialNumber}
-                />
-                <textarea
-                  required
-                  className="w-full border-0 bg-white shadow-inner rounded-2xl p-4 text-sm outline-none min-h-[120px]"
-                  placeholder="Ceritakan kendala unit Anda..."
-                ></textarea>
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-transform"
-                >
-                  Kirim Laporan
-                </button>
-              </form>
-            </section>
+
+                {serviceHistory.length === 0 ? (
+                  <p className="text-[9px] text-gray-400 font-bold text-center py-4 uppercase italic tracking-tighter">
+                    Belum ada laporan kendala.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {serviceHistory.map((report: any) => (
+                      <div
+                        key={report.id}
+                        className="p-4 bg-gray-50 rounded-2xl border border-gray-100"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-[8px] font-black text-blue-500 uppercase">
+                            {new Date(report.created_at).toLocaleDateString(
+                              "id-ID",
+                              { day: "2-digit", month: "short" },
+                            )}
+                          </span>
+                          <span
+                            className={`text-[7px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${report.status === "pending" ? "bg-orange-100 text-orange-600" : "bg-green-100 text-green-600"}`}
+                          >
+                            {report.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-600 font-medium leading-relaxed italic">
+                          "{report.description}"
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            ) : (
+              <ServiceForm
+                serialNumber={unit.serialNumber}
+                userId={currentUser.id}
+              />
+            )}
           </div>
         </div>
 
