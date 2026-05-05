@@ -1,65 +1,112 @@
-import Image from "next/image";
+// app/page.tsx
+import { cookies } from "next/headers";
+import { SHOWCASES, USERS } from "@/lib/data";
+import LogoutButton from "@/components/LogoutButton";
+import UnitCard from "@/components/UnitCard";
+import AuthErrorCard from "@/components/AuthErrorCard"; // Opsional: Pisahkan view error
 
-export default function Home() {
+export default async function Dashboard() {
+  const cookieStore = await cookies();
+  const userId = cookieStore.get("user_id")?.value;
+  const user = USERS.find((u) => u.id === userId);
+
+  // Jika tidak ada user, tampilkan view proteksi
+  if (!user) return <AuthErrorCard />;
+
+  // Optimasi: Filter data hanya sekali
+  const myUnits = SHOWCASES.filter((unit) => unit.ownerId === userId);
+  const currentDate = new Date().toLocaleDateString("id-ID", {
+    month: "long",
+    year: "numeric",
+  });
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen bg-gray-50 p-4 pb-12">
+      <div className="max-w-md mx-auto">
+        <header className="mb-10 pt-6 px-2">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-[2px] bg-blue-600 rounded-full"></span>
+              <p className="text-blue-600 font-bold text-[10px] uppercase tracking-[0.4em]">
+                Asset Management Portal
+              </p>
+            </div>
+            <div className="mt-4 flex justify-between items-end">
+              <div>
+                <h1 className="text-sm font-medium text-gray-500 uppercase tracking-widest mb-1">
+                  Selamat Datang,
+                </h1>
+                <h2 className="text-3xl font-black text-gray-900 tracking-tighter leading-tight">
+                  {user.clientName}
+                </h2>
+              </div>
+              <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 mb-1">
+                <UserIcon />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 mt-6">
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+              <p className="text-gray-600 text-[10px] font-bold uppercase tracking-tight">
+                {myUnits.length} Unit Terpantau
+              </p>
+            </div>
+            <div className="h-4 w-px bg-gray-200"></div>
+            <p className="text-gray-400 text-[10px] font-medium uppercase tracking-widest">
+              {currentDate}
+            </p>
+          </div>
+        </header>
+
+        <section className="space-y-4 mb-10">
+          <p className="px-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            Daftar Inventaris
           </p>
+          {myUnits.length > 0 ? (
+            myUnits.map((unit) => <UnitCard key={unit.id} unit={unit} />)
+          ) : (
+            <p className="text-center text-gray-400 text-xs py-10">
+              Belum ada unit terdaftar.
+            </p>
+          )}
+        </section>
+
+        <div className="px-2">
+          <LogoutButton />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        <footer className="mt-16 text-center">
+          <div className="h-px w-12 bg-gray-200 mx-auto mb-6"></div>
+          <p className="text-[10px] text-gray-300 font-black uppercase tracking-[0.5em]">
+            Holicindo • 2026
+          </p>
+        </footer>
+      </div>
+    </main>
+  );
+}
+
+// Komponen Icon Internal untuk kerapihan
+function UserIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-blue-600"
+    >
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+      <circle cx="9" cy="7" r="4"></circle>
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </svg>
   );
 }
